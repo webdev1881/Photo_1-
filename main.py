@@ -9,6 +9,8 @@ import time
 import random
 import threading
 
+from io import BytesIO
+
 # Tkinter импорты
 import tkinter as tk
 from tkinter import ttk
@@ -917,7 +919,7 @@ class ImageParserApp:
 
 
     
-    def load_product_images(self, parent_frame, item):
+    def load_product_images(self, parent_frame, item, product_frame):
         """Загрузка изображений для товара"""
         for i, image_url in enumerate(item['images'][:10]):  # Ограничиваем для производительности
             try:
@@ -927,7 +929,7 @@ class ImageParserApp:
                 # threading.Thread(target=self.load_single_image, 
                 #                args=(img_frame, image_url, item, i), daemon=True).start()
                 threading.Thread(target=self.load_single_image, 
-                                args=(img_frame, image_url, item, i, parent_frame.master.master), daemon=True).start()
+                                args=(img_frame, image_url, item, i, product_frame), daemon=True).start()
                 
             except Exception as e:
                 print(f"Ошибка загрузки изображения {image_url}: {e}")
