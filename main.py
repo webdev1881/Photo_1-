@@ -243,7 +243,22 @@ class ImageParserApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Обработчик изображений v2.0")
-        self.root.geometry("900x700")
+
+
+
+        # Получаем размер экрана
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        # Устанавливаем размер окна как процент от экрана
+        window_width = int(screen_width * 0.6)  # 50% ширины экрана
+        window_height = int(screen_height * 0.5)  # 40% высоты экрана
+
+        # Центрируем окно
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
         
         # Проверяем доступность библиотек
         self.check_dependencies()
@@ -286,18 +301,26 @@ class ImageParserApp:
     
     def create_interface(self):
         """Создание интерфейса приложения"""
+        # self.notebook = ttk.Notebook(self.root)
+        # self.notebook.pack(fill='both', expand=True, padx=10, pady=5)
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill='both', expand=True, padx=10, pady=5)
+        self.notebook.pack(fill='both', expand=True, padx=0, pady=0)
         
         # Создаем вкладки
         self.create_parsing_tab()
         self.create_viewer_tab()
         self.create_processing_tab()
         self.create_excel_tab()
+        # Вкладка помощи
+        self.create_help_tab()
     
     def create_parsing_tab(self):
         """Создание вкладки парсинга"""
         tab_frame = ttk.Frame(self.notebook)
+
+
+
+
         self.notebook.add(tab_frame, text="Парсинг изображений")
         
         # Основной фрейм
@@ -323,15 +346,14 @@ class ImageParserApp:
         settings_frame = ttk.LabelFrame(main_frame, text="Настройки парсинга")
         settings_frame.pack(fill='x', pady=(0, 10))
         
-        # Источники
-        sources_frame = ttk.Frame(settings_frame)
-        sources_frame.pack(fill='x', padx=10, pady=10)
-        
-        self.parse_prom = tk.BooleanVar(value=True)
-        self.parse_depos = tk.BooleanVar(value=True)
-        
-        ttk.Checkbutton(sources_frame, text="Prom.ua", variable=self.parse_prom).pack(side='left', padx=(0, 20))
-        ttk.Checkbutton(sources_frame, text="Depositphotos.com", variable=self.parse_depos).pack(side='left')
+        # Выбор источников
+        sources_frame = ttk.LabelFrame(tab_frame, text="Источники")
+        sources_frame.pack(fill='x', pady=5)
+
+        self.parse_source = tk.StringVar(value="prom")
+
+        ttk.Radiobutton(sources_frame, text="Prom.ua", variable=self.parse_source, value="prom").pack(anchor='w', padx=10, pady=2)
+        ttk.Radiobutton(sources_frame, text="Depositphotos.com", variable=self.parse_source, value="depos").pack(anchor='w', padx=10, pady=2)
         
         # Лимит изображений
         limit_frame = ttk.Frame(settings_frame)
@@ -363,15 +385,16 @@ class ImageParserApp:
     
     def create_viewer_tab(self):
         """Создание вкладки просмотра изображений"""
+        """Создание вкладки просмотра изображений"""
         tab_frame = ttk.Frame(self.notebook)
         self.notebook.add(tab_frame, text="Просмотр изображений")
         
-        # Заголовок
+        # Заголовок и статистика
         header_frame = ttk.Frame(tab_frame)
-        header_frame.pack(fill='x', padx=10, pady=10)
+        header_frame.pack(fill='x', padx=5, pady=5)
         
         self.viewer_stats = tk.StringVar(value="Нет данных для просмотра")
-        ttk.Label(header_frame, textvariable=self.viewer_stats, font=("Arial", 12, "bold")).pack(side='left')
+        ttk.Label(header_frame, textvariable=self.viewer_stats, font=("Helvetica", 12, "bold")).pack(side='left')
         
         # Кнопки
         buttons_frame = ttk.Frame(header_frame)
@@ -382,18 +405,45 @@ class ImageParserApp:
         ttk.Button(buttons_frame, text="Очистить выбор", command=self.clear_selection).pack(side='left')
         
         # Область просмотра
-        self.viewer_canvas = tk.Canvas(tab_frame)
-        self.viewer_scrollbar = ttk.Scrollbar(tab_frame, orient="vertical", command=self.viewer_canvas.yview)
+        # self.viewer_canvas = tk.Canvas(tab_frame)
+        # self.viewer_scrollbar = ttk.Scrollbar(tab_frame, orient="vertical", command=self.viewer_canvas.yview)
+        # self.viewer_frame = ttk.Frame(self.viewer_canvas)
+        
+        # self.viewer_frame.bind("<Configure>", 
+        #     lambda e: self.viewer_canvas.configure(scrollregion=self.viewer_canvas.bbox("all")))
+        
+        # self.viewer_canvas.create_window((0, 0), window=self.viewer_frame, anchor="nw")
+        # self.viewer_canvas.configure(yscrollcommand=self.viewer_scrollbar.set)
+        
+        # # self.viewer_canvas.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=5)
+        # # self.viewer_scrollbar.pack(side="right", fill="y", pady=5)
+        # self.viewer_canvas.pack(side="left", fill="both", expand=True, padx=0, pady=0)
+        # self.viewer_scrollbar.pack(side="right", fill="y", pady=0)
+
+        # Основная область с прокруткой
+        canvas_container = ttk.Frame(tab_frame)
+        canvas_container.pack(fill='both', expand=True, padx=0, pady=0)
+
+        self.viewer_canvas = tk.Canvas(canvas_container, bg='white')
+        self.viewer_scrollbar = ttk.Scrollbar(canvas_container, orient="vertical", command=self.viewer_canvas.yview)
         self.viewer_frame = ttk.Frame(self.viewer_canvas)
-        
-        self.viewer_frame.bind("<Configure>", 
-            lambda e: self.viewer_canvas.configure(scrollregion=self.viewer_canvas.bbox("all")))
-        
-        self.viewer_canvas.create_window((0, 0), window=self.viewer_frame, anchor="nw")
+
+        self.viewer_frame.bind(
+            "<Configure>",
+            lambda e: self.viewer_canvas.configure(scrollregion=self.viewer_canvas.bbox("all"))
+        )
+
+        canvas_window = self.viewer_canvas.create_window((0, 0), window=self.viewer_frame, anchor="nw")
         self.viewer_canvas.configure(yscrollcommand=self.viewer_scrollbar.set)
-        
-        self.viewer_canvas.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=5)
-        self.viewer_scrollbar.pack(side="right", fill="y", pady=5)
+
+        # Привязываем изменение размера canvas к изменению размера окна
+        def configure_canvas(event):
+            self.viewer_canvas.itemconfig(canvas_window, width=self.viewer_canvas.winfo_width())
+
+        self.viewer_canvas.bind('<Configure>', configure_canvas)
+
+        self.viewer_canvas.pack(side="left", fill="both", expand=True)
+        self.viewer_scrollbar.pack(side="right", fill="y")
         
         # Привязка колесика мыши
         self.viewer_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -520,6 +570,122 @@ class ImageParserApp:
         
         self.excel_result = scrolledtext.ScrolledText(result_frame, height=15)
         self.excel_result.pack(fill='both', expand=True, padx=10, pady=10)
+
+    def create_help_tab(self):
+        """Создание вкладки помощи"""
+        tab_frame = ttk.Frame(self.notebook)
+        self.notebook.add(tab_frame, text="Помощь")
+        
+        # Создаем область с прокруткой
+        canvas = tk.Canvas(tab_frame)
+        scrollbar = ttk.Scrollbar(tab_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Заголовок
+        title_label = ttk.Label(scrollable_frame, text="Мануал", font=("Arial", 16, "bold"))
+        title_label.pack(pady=(20, 10))
+        
+        # Инструкция
+        help_text = """
+
+ 1️ПАРСИНГ ИЗОБРАЖЕНИЙ:
+   • Перейти на вкладку "Парсинг изображений"
+   • Загрузить Excel файл с товарами (столбцы: "Артикул", "Название")
+   • Выбрать источник: Prom.ua или Depositphotos.com
+   • Установить лимит изображений (по умолчанию 30)
+   • Нажать "Начать парсинг"
+   • Дождаться завершения и сохранения JSON файла
+
+ 2️ПРОСМОТР И ВЫБОР ИЗОБРАЖЕНИЙ:
+   • Перейти на вкладку "Просмотр изображений"
+   • Загрузить JSON файл с результатами парсинга
+   • Для каждого товара выбрать одно изображение кликом по нему
+   • Выбранное изображение появится слева от списка
+   • Клик по выбранному изображению снимает выбор
+   • Экспортировать выбранные изображения в JSON
+
+ 3️ОБРАБОТКА ИЗОБРАЖЕНИЙ:
+   • Перейти на вкладку "Обработка изображений"
+   • Выбрать соотношение сторон (по умолчанию 4:3)
+   • Выбрать источник: "Папка input" или "JSON с выбранными"
+   • Режим: "Стандартная" или "Специальный для белого фона"
+   • Нажать "Начать обработку"
+   • Результат сохранится в папку "output"
+
+ 4️СОЗДАНИЕ EXCEL ФАЙЛА:
+   • Перейти на вкладку "Генерация Excel"
+   • Указать папку для анализа (обычно "output")
+   • Нажать "Создать Excel файл"
+   • Получить файл со списком обработанных изображений
+
+    ПОЛЕЗНЫЕ СОВЕТЫ:
+
+    - Структура папок:
+    • input/ - исходные изображения для обработки
+    • output/ - обработанные изображения
+    • target.xlsx - файл с товарами для парсинга
+
+    - Форматы файлов:
+    • Excel: .xlsx, .xls
+    • Изображения: .png, .jpg, .jpeg, .bmp, .tiff, .gif
+    • Результаты: .json
+
+
+        """
+        
+        # Создаем текстовое поле для инструкции
+        text_widget = tk.Text(scrollable_frame, wrap=tk.WORD, font=("Arial", 10), 
+                            bg='white', relief='flat', state='normal',
+                            width=80, height=30)
+        text_widget.pack(pady=10, padx=20, fill='both', expand=True)
+        
+        # Вставляем текст инструкции
+        text_widget.insert('1.0', help_text)
+        text_widget.config(state='disabled')  # Делаем только для чтения
+        
+        # Кнопки внизу
+        buttons_frame = ttk.Frame(scrollable_frame)
+        buttons_frame.pack(pady=20)
+        
+        ttk.Button(buttons_frame, text="Открыть папку input", 
+                command=lambda: self.open_folder("input")).pack(side='left', padx=(0, 10))
+        ttk.Button(buttons_frame, text="Открыть папку output", 
+                command=lambda: self.open_folder("output")).pack(side='left', padx=(0, 10))
+        ttk.Button(buttons_frame, text="Создать target.xlsx", 
+                command=self.create_sample_excel).pack(side='left')
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Привязываем колесико мыши
+        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+    def create_sample_excel(self):
+        """Создание примера Excel файла"""
+        try:
+            import pandas as pd
+            
+            # Создаем пример данных
+            sample_data = {
+                'Артикул': ['ART001', 'ART002', 'ART003'],
+                'Название': ['Пример товара 1', 'Пример товара 2', 'Пример товара 3']
+            }
+            
+            df = pd.DataFrame(sample_data)
+            df.to_excel('target_example.xlsx', index=False)
+            
+            messagebox.showinfo("Успех", "Создан файл target_example.xlsx с примером структуры данных!")
+            
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось создать файл: {e}")
     
     # Основные методы
     def browse_excel_file(self):
@@ -597,9 +763,9 @@ class ImageParserApp:
             messagebox.showwarning("Предупреждение", "Сначала загрузите данные из Excel файла!")
             return
         
-        if not self.parse_prom.get() and not self.parse_depos.get():
-            messagebox.showwarning("Предупреждение", "Выберите хотя бы один источник для парсинга!")
-            return
+        # if not self.parse_prom.get() and not self.parse_depos.get():
+        #     messagebox.showwarning("Предупреждение", "Выберите хотя бы один источник для парсинга!")
+        #     return
         
         self.stop_parsing_flag = False
         self.parsing_thread = threading.Thread(target=self.parse_images)
@@ -624,25 +790,29 @@ class ImageParserApp:
             self.parsed_results = []
             total_items = len(self.excel_data)
             
-            if self.parse_prom.get():
-                self.progress_var.set("Парсинг Prom.ua...")
-                prom_results = self.parse_source(self.excel_data, "prom", total_items)
-                self.parsed_results.extend(prom_results)
+            selected_source = self.parse_source.get()
             
-            if self.parse_depos.get() and not self.stop_parsing_flag:
+            if selected_source == "prom":
+                self.progress_var.set("Парсинг Prom.ua...")
+                source_results = self.parse_source_data(self.excel_data, "prom", total_items)
+                self.parsed_results.extend(source_results)
+            elif selected_source == "depos":
                 self.progress_var.set("Парсинг Depositphotos...")
-                depos_results = self.parse_source(self.excel_data, "depos", total_items)
-                self.parsed_results.extend(depos_results)
+                source_results = self.parse_source_data(self.excel_data, "depos", total_items)
+                self.parsed_results.extend(source_results)
             
             if not self.stop_parsing_flag:
+                # Сохраняем результаты
                 timestamp = int(time.time())
-                filename = f"parsed_results_{timestamp}.json"
+                source_name = "prom" if selected_source == "prom" else "depos"
+                filename = f"parsed_results_{source_name}_{timestamp}.json"
                 with open(filename, 'w', encoding='utf-8') as f:
                     json.dump(self.parsed_results, f, ensure_ascii=False, indent=2)
                 
                 self.progress_var.set(f"Парсинг завершен! Результаты сохранены в {filename}")
                 self.log_message(f"Парсинг завершен. Найдено изображений: {sum(len(r['images']) for r in self.parsed_results)}")
                 
+                # Обновляем просмотрщик изображений
                 self.load_parsed_results()
             else:
                 self.progress_var.set("Парсинг остановлен пользователем")
@@ -650,8 +820,13 @@ class ImageParserApp:
         except Exception as e:
             self.progress_var.set(f"Ошибка парсинга: {e}")
             self.log_message(f"ОШИБКА: {e}")
+
+
+
+
+
     
-    def parse_source(self, items, source, total_items):
+    def parse_source_data(self, items, source, total_items):
         """Парсинг одного источника"""
         results = []
         
@@ -795,6 +970,18 @@ class ImageParserApp:
     def load_parsed_results(self):
         """Загрузка результатов парсинга в просмотрщик"""
         for widget in self.viewer_frame.winfo_children():
+            if hasattr(widget, 'article'):
+                article = getattr(widget, 'article')
+                if article not in self.selected_images:
+                    selected_frame = getattr(widget, 'selected_frame', None)
+                    if selected_frame:
+                        # Очищаем фрейм
+                        for child in selected_frame.winfo_children():
+                            child.destroy()
+                        # Добавляем placeholder
+                        placeholder = tk.Label(selected_frame, text="Не выбрано", 
+                                            fg='gray', font=("Arial", 10))
+                        placeholder.pack(expand=True)
             widget.destroy()
         
         if not self.parsed_results:
@@ -850,7 +1037,7 @@ class ImageParserApp:
         """Создание виджета для одного товара"""
         # Основной фрейм товара
         product_frame = ttk.Frame(self.viewer_frame)
-        product_frame.pack(fill='x', padx=10, pady=5)
+        product_frame.pack(fill='x', padx=5, pady=5)
         
         # Информация о товаре
         info_frame = ttk.Frame(product_frame)
@@ -860,39 +1047,43 @@ class ImageParserApp:
         selected_indicator = "✓" if item['article'] in self.selected_images else "○"
         info_text = f"{selected_indicator} {index+1}. [{item['article']}] {item['name']} ({item['source']})"
         
-        info_label = ttk.Label(info_frame, text=info_text, font=("Arial", 10, "bold"))
+        info_label = ttk.Label(info_frame, text=info_text, font=("Helvetica", 10, "bold"))
         info_label.pack(side='left')
         
         # Основной контейнер с изображениями и выбранным изображением
+        # main_container = ttk.Frame(product_frame)
+        # main_container.pack(fill='x', expand=False, padx=10, pady=5)
         main_container = ttk.Frame(product_frame)
-        main_container.pack(fill='both', expand=True, pady=5)
+        main_container.pack(fill='x', expand=False, padx=5, pady=5)
         
         # Левая часть - скролл с изображениями (80% ширины)
         left_frame = ttk.Frame(main_container)
-        left_frame.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        left_frame.pack(side='right', fill='both', expand=True, padx=(0, 10))
         
         # Правая часть - выбранное изображение (фиксированная ширина)
-        right_frame = ttk.Frame(main_container, width=200)
-        right_frame.pack(side='right', fill='y')
+        right_frame = ttk.Frame(main_container, width=200, height=200)
+        right_frame.pack(side='left', fill='y', padx=(0, 10))
         right_frame.pack_propagate(False)
         
         # Заголовок для выбранного изображения
-        ttk.Label(right_frame, text="Выбранное:", font=("Arial", 9, "bold")).pack(pady=(0, 5))
-        
+        # ttk.Label(right_frame, text="Выбранное:", font=("Arial", 9, "bold")).pack(pady=(0, 5))
+
         # Фрейм для выбранного изображения
-        selected_frame = ttk.Frame(right_frame, relief='solid', borderwidth=1)
+        selected_frame = ttk.Frame(right_frame)
         selected_frame.pack(fill='both', expand=True)
-        
+
         # Сохраняем ссылку на фреймы для обновления
         setattr(product_frame, 'selected_frame', selected_frame)
         setattr(product_frame, 'info_label', info_label)
         setattr(product_frame, 'article', item['article'])
-        
+
         # Создаем Canvas для горизонтальной прокрутки изображений
         canvas = tk.Canvas(left_frame, height=160)
         h_scrollbar = ttk.Scrollbar(left_frame, orient="horizontal", command=canvas.xview)
-        
+
         scroll_frame = ttk.Frame(canvas)
+
+
         scroll_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
@@ -907,9 +1098,16 @@ class ImageParserApp:
         canvas.pack(fill='both', expand=True)
         h_scrollbar.pack(fill='x')
         
-        # Показываем выбранное изображение, если есть
+        # Показываем выбранное изображение, если есть 
+        # if item['article'] in self.selected_images:
+        #     self.update_selected_image_display(product_frame, self.selected_images[item['article']])
         if item['article'] in self.selected_images:
             self.update_selected_image_display(product_frame, self.selected_images[item['article']])
+        else:
+            # Показываем placeholder "Не выбрано"
+            placeholder = tk.Label(selected_frame, text="Не выбрано", 
+                                fg='gray', font=("Arial", 10))
+            placeholder.pack(expand=True)
         
         # Разделитель
         ttk.Separator(product_frame, orient='horizontal').pack(fill='x', pady=10)
@@ -921,7 +1119,7 @@ class ImageParserApp:
     
     def load_product_images(self, parent_frame, item, product_frame):
         """Загрузка изображений для товара"""
-        for i, image_url in enumerate(item['images'][:10]):  # Ограничиваем для производительности
+        for i, image_url in enumerate(item['images'][:50]):  # Ограничиваем для производительности
             try:
                 img_frame = ttk.Frame(parent_frame)
                 img_frame.pack(side='left', padx=5)
@@ -955,7 +1153,7 @@ class ImageParserApp:
                 image = Image.open(temp_path)
                 os.remove(temp_path)
             
-            image.thumbnail((120, 120), Image.Resampling.LANCZOS)
+            image.thumbnail((150, 150), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             
             # self.root.after(0, lambda: self.create_image_button(parent_frame, photo, image_url, item, img_index))
@@ -1019,7 +1217,7 @@ class ImageParserApp:
             self.selected_images[article] = image_url
         
         total_images = sum(len(item['images']) for item in self.parsed_results)
-        self.viewer_stats.set(f"Товаров: {len(self.parsed_results)} | Изображений: {total_images} | Выбрано: {len(self.selected_images)}")
+        self.viewer_stats.set("Товаров: {len(self.parsed_results)} | Изображений: {total_images} | Выбрано: {len(self.selected_images)}")
         
         self.load_parsed_results()
 
@@ -1056,6 +1254,54 @@ class ImageParserApp:
         # Обновляем визуальное состояние кнопок только для этого товара
         self.update_product_buttons_state(product_frame, article, image_url, old_selection)
 
+
+    def deselect_image(self, article):
+        """Снятие выбора изображения с товара"""
+        if article in self.selected_images:
+            del self.selected_images[article]
+            
+            # Находим product_frame для этого товара
+            product_frame = None
+            for widget in self.viewer_frame.winfo_children():
+                if hasattr(widget, 'article') and getattr(widget, 'article') == article:
+                    product_frame = widget
+                    break
+            
+            if product_frame:
+                # Очищаем выбранное изображение
+                selected_frame = getattr(product_frame, 'selected_frame', None)
+                if selected_frame:
+                    for widget in selected_frame.winfo_children():
+                        widget.destroy()
+                    
+                    # Добавляем placeholder
+                    placeholder = tk.Label(selected_frame, text="Не выбрано", 
+                                        fg='gray', font=("Arial", 10))
+                    placeholder.pack(expand=True)
+                
+                # Обновляем индикатор в заголовке товара
+                info_label = getattr(product_frame, 'info_label', None)
+                if info_label:
+                    # Находим индекс товара
+                    index = 0
+                    for i, item in enumerate(self.parsed_results):
+                        if item['article'] == article:
+                            index = i
+                            break
+                    
+                    item_info = next((item for item in self.parsed_results if item['article'] == article), None)
+                    if item_info:
+                        info_text = f"○ {index+1}. [{article}] {item_info['name']} ({item_info['source']})"
+                        info_label.config(text=info_text)
+            
+            # Обновляем статистику
+            total_images = sum(len(item['images']) for item in self.parsed_results)
+            self.viewer_stats.set(f"Товаров: {len(self.parsed_results)} | Изображений: {total_images} | Выбрано: {len(self.selected_images)}")
+
+
+
+
+
     def update_selected_image_display(self, product_frame, image_url):
         """Обновление отображения выбранного изображения"""
         selected_frame = getattr(product_frame, 'selected_frame', None)
@@ -1079,7 +1325,7 @@ class ImageParserApp:
             
             image = Image.open(BytesIO(response.content))
             # Изменяем размер для отображения в правой панели
-            image.thumbnail((180, 180), Image.Resampling.LANCZOS)
+            image.thumbnail((160, 160), Image.Resampling.LANCZOS)
             
             photo = ImageTk.PhotoImage(image)
             
@@ -1091,18 +1337,35 @@ class ImageParserApp:
 
     def create_selected_image_label(self, parent_frame, photo, image_url):
         """Создание label с выбранным изображением"""
-        label = tk.Label(parent_frame, image=photo, bg='white')
+        # Находим артикул товара из parent_frame
+        article = None
+        current_frame = parent_frame
+        while current_frame and not hasattr(current_frame, 'article'):
+            current_frame = current_frame.master
+        if current_frame:
+            article = getattr(current_frame, 'article', None)
+        
+        label = tk.Button(parent_frame, image=photo, 
+                        # bg='white', 
+                        # relief='solid', 
+                        # borderwidth=0,
+                        command=lambda: self.deselect_image(article) if article else None,
+                        cursor='hand2')
         label.pack(expand=True)
         label.image = photo  # Сохраняем ссылку
+
+        # Добавляем подсказку под изображением
+        url_label = tk.Label(parent_frame, text="Клик для отмены", fg='green', font=("Arial", 8))
+        url_label.pack(pady=(3, 0))
         
         # Добавляем URL под изображением
-        url_label = tk.Label(parent_frame, text="Выбрано", fg='green', font=("Arial", 8))
-        url_label.pack(pady=(5, 0))
+        # url_label = tk.Label(parent_frame, text="Выбрано", fg='green', font=("Arial", 8))
+        # url_label.pack(pady=(10, 0))
 
     def create_selected_error_label(self, parent_frame, error_msg):
         """Создание label с ошибкой для выбранного изображения"""
         error_label = tk.Label(parent_frame, text="Ошибка\nзагрузки", 
-                            fg='red', font=("Arial", 8))
+                            fg='red', font=("Helvetica", 8))
         error_label.pack(expand=True)
 
     def update_product_buttons_state(self, product_frame, article, selected_url, old_selection):
