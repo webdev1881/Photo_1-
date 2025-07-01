@@ -805,44 +805,117 @@ class ImageParserApp:
         for i, item in enumerate(self.parsed_results):
             self.create_product_widget(item, i)
     
+    # def create_product_widget(self, item, index):
+    #     """Создание виджета для одного товара"""
+    #     product_frame = ttk.Frame(self.viewer_frame)
+    #     product_frame.pack(fill='x', padx=10, pady=5)
+        
+    #     info_frame = ttk.Frame(product_frame)
+    #     info_frame.pack(fill='x', pady=5)
+        
+    #     selected_indicator = "✓" if item['article'] in self.selected_images else "○"
+    #     info_text = f"{selected_indicator} {index+1}. [{item['article']}] {item['name']} ({item['source']})"
+        
+    #     info_label = ttk.Label(info_frame, text=info_text, font=("Arial", 10, "bold"))
+    #     info_label.pack(side='left')
+        
+    #     if item['images']:
+    #         select_btn = ttk.Button(info_frame, text="Выбрать первое", 
+    #                               command=lambda: self.select_first_image(item))
+    #         select_btn.pack(side='right')
+        
+    #     images_frame = ttk.Frame(product_frame)
+    #     images_frame.pack(fill='x', pady=5)
+        
+    #     canvas = tk.Canvas(images_frame, height=160)
+    #     h_scrollbar = ttk.Scrollbar(images_frame, orient="horizontal", command=canvas.xview)
+        
+    #     scroll_frame = ttk.Frame(canvas)
+    #     scroll_frame.bind("<Configure>", 
+    #         lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        
+    #     canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    #     canvas.configure(xscrollcommand=h_scrollbar.set)
+        
+    #     self.load_product_images(scroll_frame, item)
+        
+    #     canvas.pack(fill='x')
+    #     h_scrollbar.pack(fill='x')
+        
+    #     ttk.Separator(product_frame, orient='horizontal').pack(fill='x', pady=10)
+
     def create_product_widget(self, item, index):
         """Создание виджета для одного товара"""
+        # Основной фрейм товара
         product_frame = ttk.Frame(self.viewer_frame)
         product_frame.pack(fill='x', padx=10, pady=5)
         
+        # Информация о товаре
         info_frame = ttk.Frame(product_frame)
         info_frame.pack(fill='x', pady=5)
         
+        # Индикатор выбора
         selected_indicator = "✓" if item['article'] in self.selected_images else "○"
         info_text = f"{selected_indicator} {index+1}. [{item['article']}] {item['name']} ({item['source']})"
         
         info_label = ttk.Label(info_frame, text=info_text, font=("Arial", 10, "bold"))
         info_label.pack(side='left')
         
-        if item['images']:
-            select_btn = ttk.Button(info_frame, text="Выбрать первое", 
-                                  command=lambda: self.select_first_image(item))
-            select_btn.pack(side='right')
+        # Основной контейнер с изображениями и выбранным изображением
+        main_container = ttk.Frame(product_frame)
+        main_container.pack(fill='both', expand=True, pady=5)
         
-        images_frame = ttk.Frame(product_frame)
-        images_frame.pack(fill='x', pady=5)
+        # Левая часть - скролл с изображениями (80% ширины)
+        left_frame = ttk.Frame(main_container)
+        left_frame.pack(side='left', fill='both', expand=True, padx=(0, 10))
         
-        canvas = tk.Canvas(images_frame, height=160)
-        h_scrollbar = ttk.Scrollbar(images_frame, orient="horizontal", command=canvas.xview)
+        # Правая часть - выбранное изображение (фиксированная ширина)
+        right_frame = ttk.Frame(main_container, width=200)
+        right_frame.pack(side='right', fill='y')
+        right_frame.pack_propagate(False)
+        
+        # Заголовок для выбранного изображения
+        ttk.Label(right_frame, text="Выбранное:", font=("Arial", 9, "bold")).pack(pady=(0, 5))
+        
+        # Фрейм для выбранного изображения
+        selected_frame = ttk.Frame(right_frame, relief='solid', borderwidth=1)
+        selected_frame.pack(fill='both', expand=True)
+        
+        # Сохраняем ссылку на фреймы для обновления
+        setattr(product_frame, 'selected_frame', selected_frame)
+        setattr(product_frame, 'info_label', info_label)
+        setattr(product_frame, 'article', item['article'])
+        
+        # Создаем Canvas для горизонтальной прокрутки изображений
+        canvas = tk.Canvas(left_frame, height=160)
+        h_scrollbar = ttk.Scrollbar(left_frame, orient="horizontal", command=canvas.xview)
         
         scroll_frame = ttk.Frame(canvas)
-        scroll_frame.bind("<Configure>", 
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
         
         canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
         canvas.configure(xscrollcommand=h_scrollbar.set)
         
-        self.load_product_images(scroll_frame, item)
+        # Загружаем изображения
+        self.load_product_images(scroll_frame, item, product_frame)
         
-        canvas.pack(fill='x')
+        canvas.pack(fill='both', expand=True)
         h_scrollbar.pack(fill='x')
         
+        # Показываем выбранное изображение, если есть
+        if item['article'] in self.selected_images:
+            self.update_selected_image_display(product_frame, self.selected_images[item['article']])
+        
+        # Разделитель
         ttk.Separator(product_frame, orient='horizontal').pack(fill='x', pady=10)
+
+
+
+
+
     
     def load_product_images(self, parent_frame, item):
         """Загрузка изображений для товара"""
@@ -851,13 +924,16 @@ class ImageParserApp:
                 img_frame = ttk.Frame(parent_frame)
                 img_frame.pack(side='left', padx=5)
                 
+                # threading.Thread(target=self.load_single_image, 
+                #                args=(img_frame, image_url, item, i), daemon=True).start()
                 threading.Thread(target=self.load_single_image, 
-                               args=(img_frame, image_url, item, i), daemon=True).start()
+                                args=(img_frame, image_url, item, i, parent_frame.master.master), daemon=True).start()
                 
             except Exception as e:
                 print(f"Ошибка загрузки изображения {image_url}: {e}")
     
-    def load_single_image(self, parent_frame, image_url, item, img_index):
+    # def load_single_image(self, parent_frame, image_url, item, img_index):
+    def load_single_image(self, parent_frame, image_url, item, img_index, product_frame):
         """Загрузка одного изображения"""
         if not PIL_AVAILABLE:
             self.root.after(0, lambda: self.create_error_placeholder(parent_frame, "PIL недоступен"))
@@ -880,12 +956,18 @@ class ImageParserApp:
             image.thumbnail((120, 120), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             
-            self.root.after(0, lambda: self.create_image_button(parent_frame, photo, image_url, item, img_index))
+            # self.root.after(0, lambda: self.create_image_button(parent_frame, photo, image_url, item, img_index))
+            self.root.after(0, lambda: self.create_image_button(parent_frame, photo, image_url, item, img_index, product_frame))
             
         except Exception as e:
             self.root.after(0, lambda: self.create_error_placeholder(parent_frame, str(e)))
+
+
+
+
     
-    def create_image_button(self, parent_frame, photo, image_url, item, img_index):
+    # def create_image_button(self, parent_frame, photo, image_url, item, img_index):
+    def create_image_button(self, parent_frame, photo, image_url, item, img_index, product_frame):
         """Создание кнопки с изображением"""
         try:
             if not parent_frame.winfo_exists():
@@ -893,11 +975,17 @@ class ImageParserApp:
                 
             is_selected = self.selected_images.get(item['article']) == image_url
             
+            # btn = tk.Button(parent_frame, image=photo, 
+            #                command=lambda: self.select_image(item['article'], image_url),
+            #                relief='solid' if is_selected else 'raised',
+            #                borderwidth=3 if is_selected else 1,
+            #                bg='lightblue' if is_selected else 'white')
             btn = tk.Button(parent_frame, image=photo, 
-                           command=lambda: self.select_image(item['article'], image_url),
-                           relief='solid' if is_selected else 'raised',
-                           borderwidth=3 if is_selected else 1,
-                           bg='lightblue' if is_selected else 'white')
+                            command=lambda: self.select_image_new(item['article'], image_url, product_frame),
+                            relief='solid' if is_selected else 'raised',
+                            borderwidth=3 if is_selected else 1,
+                            bg='lightblue' if is_selected else 'white')
+
             btn.pack()
             btn.image = photo
             
@@ -932,6 +1020,120 @@ class ImageParserApp:
         self.viewer_stats.set(f"Товаров: {len(self.parsed_results)} | Изображений: {total_images} | Выбрано: {len(self.selected_images)}")
         
         self.load_parsed_results()
+
+    
+
+    def select_image_new(self, article, image_url, product_frame):
+        """Выбор изображения для товара без ререндера"""
+        # Обновляем выбранное изображение
+        old_selection = self.selected_images.get(article)
+        self.selected_images[article] = image_url
+        
+        # Обновляем отображение выбранного изображения
+        self.update_selected_image_display(product_frame, image_url)
+        
+        # Обновляем индикатор в заголовке товара
+        info_label = getattr(product_frame, 'info_label', None)
+        if info_label:
+            # Находим индекс товара
+            index = 0
+            for i, item in enumerate(self.parsed_results):
+                if item['article'] == article:
+                    index = i
+                    break
+            
+            item_info = next((item for item in self.parsed_results if item['article'] == article), None)
+            if item_info:
+                info_text = f"✓ {index+1}. [{article}] {item_info['name']} ({item_info['source']})"
+                info_label.config(text=info_text)
+        
+        # Обновляем статистику
+        total_images = sum(len(item['images']) for item in self.parsed_results)
+        self.viewer_stats.set(f"Товаров: {len(self.parsed_results)} | Изображений: {total_images} | Выбрано: {len(self.selected_images)}")
+        
+        # Обновляем визуальное состояние кнопок только для этого товара
+        self.update_product_buttons_state(product_frame, article, image_url, old_selection)
+
+    def update_selected_image_display(self, product_frame, image_url):
+        """Обновление отображения выбранного изображения"""
+        selected_frame = getattr(product_frame, 'selected_frame', None)
+        if not selected_frame:
+            return
+        
+        # Очищаем текущее содержимое
+        for widget in selected_frame.winfo_children():
+            widget.destroy()
+        
+        # Загружаем и отображаем выбранное изображение
+        threading.Thread(target=self.load_selected_image, 
+                    args=(selected_frame, image_url), daemon=True).start()
+
+    def load_selected_image(self, parent_frame, image_url):
+        """Загрузка выбранного изображения"""
+        try:
+            from io import BytesIO
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            
+            image = Image.open(BytesIO(response.content))
+            # Изменяем размер для отображения в правой панели
+            image.thumbnail((180, 180), Image.Resampling.LANCZOS)
+            
+            photo = ImageTk.PhotoImage(image)
+            
+            # Создаем label с изображением в основном потоке
+            self.root.after(0, lambda: self.create_selected_image_label(parent_frame, photo, image_url))
+            
+        except Exception as e:
+            self.root.after(0, lambda: self.create_selected_error_label(parent_frame, str(e)))
+
+    def create_selected_image_label(self, parent_frame, photo, image_url):
+        """Создание label с выбранным изображением"""
+        label = tk.Label(parent_frame, image=photo, bg='white')
+        label.pack(expand=True)
+        label.image = photo  # Сохраняем ссылку
+        
+        # Добавляем URL под изображением
+        url_label = tk.Label(parent_frame, text="Выбрано", fg='green', font=("Arial", 8))
+        url_label.pack(pady=(5, 0))
+
+    def create_selected_error_label(self, parent_frame, error_msg):
+        """Создание label с ошибкой для выбранного изображения"""
+        error_label = tk.Label(parent_frame, text="Ошибка\nзагрузки", 
+                            fg='red', font=("Arial", 8))
+        error_label.pack(expand=True)
+
+    def update_product_buttons_state(self, product_frame, article, selected_url, old_selection):
+        """Обновление состояния кнопок изображений для товара"""
+        # Этот метод можно оставить пустым, так как визуальные изменения 
+        # кнопок будут видны при следующем обновлении
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     def select_first_image(self, item):
         """Выбор первого изображения товара"""

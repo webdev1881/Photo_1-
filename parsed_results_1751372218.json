@@ -1,0 +1,28 @@
+[
+  {
+    "article": "5542",
+    "name": "Вишня",
+    "source": "Prom.ua",
+    "images": [
+      "https://images.prom.ua/6190950377_w200_h200_sushenaya-vishnya-bez.jpg",
+      "https://images.prom.ua/5734471597_w200_h200_vishnya-monmoransi-.jpg"
+    ]
+  },
+  {
+    "article": "12290",
+    "name": "Диня Амал",
+    "source": "Prom.ua",
+    "images": [
+      "https://images.prom.ua/6578162169_w200_h200_dinya-amal-f1-5shtrannya.jpg",
+      "https://images.prom.ua/6620473203_w200_h200_semena-dynya-amal.jpg"
+    ]
+  },
+  {
+    "article": "6007",
+    "name": "Цибуля Ялтинська кг",
+    "source": "Prom.ua",
+    "images": [
+      "https://images.prom.ua/6251829159_w200_h200_luk-sevok-ozimyj.jpg"
+    ]
+  }
+]
